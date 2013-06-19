@@ -32,7 +32,7 @@ def get_openflow_rule(tfs,inv_mapf,rule_id):
     return rprint
   else:
     tf = tfs[tf_name]
-    rule = tf.id_to_rule[rule_id]
+    rule = tf.rules[int(tokens[-1])-1]
     of_rule = ofg.parse_rule(rule)
     (match,rw) = ofg.pretify(of_rule)
     return "%s %s"%(match,rw)
