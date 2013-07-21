@@ -168,7 +168,7 @@ for line in lines:
         final_table.append(["","",""])
       count += 1
       print "FEC",count,":"
-      print tabulate(final_table,["In-Port","Rule","Out-Port"],tablefmt="orgtbl")
+      print tabulate(final_table,["In-Port","Match and Action","Out-Port"],tablefmt="orgtbl")
       print final_hs,"\n"
       str_rules_table = []
       final_hs = ""
