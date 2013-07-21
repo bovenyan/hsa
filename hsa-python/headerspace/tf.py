@@ -64,6 +64,11 @@ class TF(object):
         self.hash_table_object = None
         self.hash_table_active = False
         
+        self.verbose = False
+        
+    def set_verbose(self,v):
+        self.verbose = v
+        
     def set_prefix_id(self,str_prefix):
         self.prefix_id = str_prefix
         
@@ -763,7 +768,8 @@ class TF(object):
         '''
         saves all the non-custom transfer function rules to a json file
         '''
-        print "=== Saving transfer function to json file %s ==="%file
+        if self.verbose:
+            print "=== Saving transfer function to json file %s ==="%file
         func = {}
         func["length"] = self.length
         func["prefix_id"] = self.prefix_id
@@ -798,14 +804,16 @@ class TF(object):
         f = open(file, 'w')
         f.write(json.dumps(func, indent=1))
         f.close()
-        print "=== Transfer function saved to json file %s ==="%file
+        if self.verbose:
+            print "=== Transfer function saved to json file %s ==="%file
         
     def save_object_to_file(self, file):
         '''
         Depreciated
         saves all the non-custom transfer function rules to a file
         '''
-        print "=== Saving transfer function to file %s ==="%file
+        if self.verbose:
+            print "=== Saving transfer function to file %s ==="%file
         f = open(file, 'w')
         f.write("%d$%s$%d$%d$%d$\n"%(2*self.length,\
                                      self.prefix_id,\
@@ -839,10 +847,12 @@ class TF(object):
                 f.write("%d,"%ln)
             f.write("$%s$\n"%rule["id"])
         f.close()
-        print "=== Transfer function saved to file %s ==="%file
+        if self.verbose:
+            print "=== Transfer function saved to file %s ==="%file
         
     def load_from_json(self, file):
-        print "=== Loading transfer function from file %s ==="%file
+        if self.verbose:
+            print "=== Loading transfer function from file %s ==="%file
         f = open(file,'r')
         func = json.load(f)
         self.rules = []
@@ -870,14 +880,16 @@ class TF(object):
             rule["affected_by"][j][0] = self.rules[rule["affected_by"][j][0]]
     
           self._set_fast_lookup_pointers(indx)
-        
+        if self.verbose:
+          print "=== Transfer function loaded from file %s ==="%file
         
     def load_object_from_file(self, file):
         '''
         Depreciated
         load object from file, and replace the current object.
         '''
-        print "=== Loading transfer function from file %s ==="%file
+        if self.verbose:
+            print "=== Loading transfer function from file %s ==="%file
         f = open(file,'r')
         self.rules = []
         first_line = f.readline()
@@ -973,8 +985,8 @@ class TF(object):
                 affects.append(new_affect)
             rule["affected_by"] = affects
             self._set_fast_lookup_pointers(indx)
-            
-        print "=== Transfer function loaded from file %s ==="%file
+        if self.verbose:  
+            print "=== Transfer function loaded from file %s ==="%file
             
     def __str__(self):
         strs = self.to_string()

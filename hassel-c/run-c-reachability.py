@@ -11,6 +11,7 @@ from headerspace.tf import TF
 from utils.wildcard_utils import set_header_field
 from utils.wildcard import wildcard_create_bit_repeat
 from utils.helper import dotted_subnet_to_int
+from tabulate import tabulate
 
 OUTPORT_CONST = cisco_router.OUTPUT_PORT_TYPE_CONST * cisco_router.PORT_TYPE_MULTIPLIER
 INTER_CONST = cisco_router.INTERMEDIATE_PORT_TYPE_CONST * cisco_router.PORT_TYPE_MULTIPLIER
@@ -28,7 +29,7 @@ def get_openflow_rule(tfs,inv_mapf,rule_id):
   if tf_name == "":
     tf = tfs["topology"]
     rule = tf.id_to_rule[rule_id]
-    rprint = "LINK: %s-->%s"%(inv_mapf[rule["in_ports"][0]],inv_mapf[rule["out_ports"][0]])
+    rprint = (inv_mapf[rule["in_ports"][0]],inv_mapf[rule["out_ports"][0]])
     return rprint
   else:
     tf = tfs[tf_name]
@@ -133,6 +134,9 @@ command = command + " " + str(src_id) + " " + str(dst_id)
 (stat,res) = commands.getstatusoutput(command)
 print command
 lines = res.split("\n")
+str_rules_table = []
+final_hs = ""
+count = 0
 for line in lines:
   if args.verbose and line.startswith("->"):
     p1 = line.find("Port:")
@@ -140,16 +144,37 @@ for line in lines:
     if p1 != -1:
       if p2 == -1:
         port = inv_mapf[int(line[p1+5:].strip())]
-        print "@ START: %s"%port
+        str_rules_table.append([port])
       else:
         port = inv_mapf[int(line[p1+5:p2].strip(", "))]
         rules = line[p2+6:].split(",")
-        str_rules = ""
         for rule in rules:
           rule = rule.strip()
-          str_rules = "%s%s==> "%(str_rules,get_openflow_rule(tfs,inv_mapf,rule))
-        str_rules = str_rules[0:-4];
-        print "# RULES: %s"%str_rules
-        print "@ PORT : %s"%port
+          of_rule = get_openflow_rule(tfs,inv_mapf,rule)
+          if of_rule.__class__ == str:
+            str_rules_table[-1].append(of_rule)
+          else:
+            str_rules_table[-1].append(of_rule[0])
+        str_rules_table.append([port])
+  elif args.verbose:
+    if line.startswith("--"):
+      last_port = str_rules_table.pop()[0]
+      str_rules_table[-1].append(last_port)
+      final_table = []
+      for l in str_rules_table:
+        final_table.append([l[0],l[1],l[-1]])
+        for i in range(2,len(l)-1):
+          final_table.append(["",l[i],""])
+        final_table.append(["","",""])
+      count += 1
+      print "FEC",count,":"
+      print tabulate(final_table,["In-Port","Rule","Out-Port"],tablefmt="orgtbl")
+      print final_hs,"\n"
+      str_rules_table = []
+      final_hs = ""
+    else:
+      final_hs =  line
   else:
     print line
+if args.verbose:      
+  print "Count",count

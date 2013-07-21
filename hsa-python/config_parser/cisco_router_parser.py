@@ -60,7 +60,7 @@ class cisco_router(object):
     self.hs_format = self.HS_FORMAT()
     self.replaced_vlan = 0  #(from_vlan,to_vlan)
     self.def_vlan = 1
-    
+   
   def set_default_vlan(self,vlan):
     self.def_vlan = vlan
     

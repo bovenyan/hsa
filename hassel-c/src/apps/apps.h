@@ -99,6 +99,12 @@ main (int argc, char **argv)
 	  hs_copy (&in->hs, &hs);
 	  in->port = in_port;
 	  res = ntf_search(in, nout ? out : NULL, nout);
+          struct res *cur = res.head;
+	  while (cur) {
+               cur->parent = in;
+               in->refs++;
+               cur = cur->next;
+         }
   } else {
 	  app_add_in (&hs, in_port);
 	  res = reachability (nout ? out : NULL, nout, hop_count, find_loop);
