@@ -37,6 +37,43 @@ def get_openflow_rule(tfs,inv_mapf,rule_id):
     of_rule = ofg.parse_rule(rule)
     (match,rw) = ofg.pretify(of_rule)
     return "%s %s"%(match,rw)
+  
+def parse_single_h(header):
+  hs_format = cisco_router.HS_FORMAT()
+  header = header.strip("() ").split(",")
+  hs_bytes = [b.strip("D") for b in reversed(header)]
+  FEC_string = ""
+  if "vlan_pos" in hs_format.keys() and hs_bytes[hs_format["vlan_pos"]] != "X":
+    v = int(hs_bytes[hs_format["vlan_pos"]]) + \
+        int(hs_bytes[hs_format["vlan_pos"] + 1]) * 256
+    FEC_string = "VLAN:%d "%v
+  if "ip_dst_pos" in hs_format.keys():
+    ip_address = ""
+    subnet = 32
+    for i in range(4):
+      if 'x' in hs_bytes[hs_format["ip_dst_pos"]+i]:
+        oct = hs_bytes[hs_format["ip_dst_pos"] + i]
+        subnet -= oct.count("x")
+        oct = oct.replace("x","0")
+        ip_address = "%d.%s"%(int(oct,2),ip_address)
+      elif hs_bytes[hs_format["ip_dst_pos"]+i] == 'X':
+        ip_address = "0.%s"%ip_address
+        subnet -= 8       
+      else:
+        ip_address = "%s.%s"%(hs_bytes[hs_format["ip_dst_pos"]+i],ip_address)
+    FEC_string = FEC_string + "DST-IP:%s/%d "%(ip_address[:-1],subnet)
+  return FEC_string
+  
+def parse_hs_string(h_string):
+  minplus = h_string.split("-")
+  if len(minplus) == 1:
+    return parse_single_h(minplus[0])
+  else:
+    s = "(" + parse_single_h(minplus[0]) + ") - ("
+    mins = minplus[1].split("+")
+    for m in mins:
+      s += parse_single_h(m) + "& "
+    return s[:-2] + ")"
       
 def make_header(h_desc):
   all_x = wildcard_create_bit_repeat(cisco_router.HS_FORMAT()["length"],0x3)
@@ -138,6 +175,7 @@ str_rules_table = []
 final_hs = ""
 count = 0
 for line in lines:
+  line = line.strip()
   if args.verbose and line.startswith("->"):
     p1 = line.find("Port:")
     p2 = line.find("Rules:")
@@ -167,13 +205,18 @@ for line in lines:
           final_table.append(["",l[i],""])
         final_table.append(["","",""])
       count += 1
-      print "FEC",count,":"
+      print "**FEC ",count,"**"
+      print "Header at Destination:",final_hs
       print tabulate(final_table,["In-Port","Match and Action","Out-Port"],tablefmt="orgtbl")
-      print final_hs,"\n"
+      print "\n"
       str_rules_table = []
       final_hs = ""
-    else:
-      final_hs =  line
+    elif line.startswith("HS"):
+      parse_hs_string(line[4:])
+      final_hs = parse_hs_string(line)
+    elif line.startswith("Time"):
+      tp = line.split()
+      print "Run Time:", int(tp[1])/1000,"ms"
   else:
     print line
 if args.verbose:      
