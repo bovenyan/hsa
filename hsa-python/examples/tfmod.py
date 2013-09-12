@@ -96,8 +96,8 @@ parser.add_argument('rtr_name',
                    help='name of the router to work on its transfer function.')
 parser.add_argument("--view", nargs=1, metavar=('table'),
                     help="view rules in table (table: in/mid/out).")
-parser.add_argument("--rm", nargs=1, metavar=('rule_index'),
-                    help="removes the rule with rule_index from the transfer function.")
+parser.add_argument("--rm", nargs=1, metavar=('rule_indices'),
+                    help="removes the rules with rule_indices from the transfer function.")
 parser.add_argument("--add", nargs=2, metavar=('rule_index','rule'),
                     help="add a rule at index rule_index to the router. rule is a\
                     semi-colon separated list of field=value or new_filed=new_value.\
@@ -143,7 +143,11 @@ if args.view:
     i = i + 1;
 elif args.rm:
   f = tfs[args.rtr_name]
-  f.remove_rule(int(args.rm[0])-1)
+  indices = args.rm[0].split(",")
+  indices = [int(i) for i in indices]
+  indices.sort(reverse=True)
+  for index in indices:
+    f.remove_rule(index-1)
   f.save_object_to_file("%s/%s.tf"%(args.data_path,args.rtr_name))
   f.save_as_json("%s/%s.tf.json"%(args.data_path,args.rtr_name))    
 elif args.add:
