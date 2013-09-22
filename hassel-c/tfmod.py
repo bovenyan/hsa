@@ -2,7 +2,7 @@
 
 import argparse
 import json
-import os
+import sys
 import copy
 from config_parser.transfer_function_to_openflow import OpenFlow_Rule_Generator 
 from config_parser.cisco_router_parser import cisco_router
@@ -98,13 +98,15 @@ parser.add_argument("--view", nargs=1, metavar=('table'),
                     help="view rules in table (table: in/mid/out).")
 parser.add_argument("--rm", nargs=1, metavar=('rule_indices'),
                     help="removes the rules with rule_indices from the transfer function.")
-parser.add_argument("--add", nargs=2, metavar=('rule_index','rule'),
-                    help="add a rule at index rule_index to the router. rule is a\
+parser.add_argument("--add", nargs=2, metavar=('rule_indices','rules'),
+                    help="add a set of rules at indices rule_indices to the router. rule is a\
                     semi-colon separated list of field=value or new_filed=new_value.\
-                    example: \"in_port=te1/1,te2/2;ip_dst=10.0.1.0/24;new_vlan=10;out_port=te1/2\"\
+                    example: \"in_port=te1/1,te2/2;ip_dst=10.0.1.0/24;new_vlan=10;out_ports=te1/2,te1/3\"\
                     field can be vlan, ip_src, ip_dst, ip_proto, transport_src, trnsport_dst.\
                     in_ports and out_ports specify the input and output ports, separated by a comma.\
-                    Note that rule description should be between \" \".")
+                    Note that rule description should be between \" \".\
+                    If adding more than one rule, the rule positions should be separated by comma and \
+                    the rules should be separated by colon.")
 parser.add_argument("-m", "--map_file", default="port_map.json",
                     help="Port map file name.")
 parser.add_argument("-p", "--data_path", default=".",
@@ -125,40 +127,38 @@ for rtr in mapf:
   inv_mapf[fwd_id] = "FWD-ENGINE"
   mapf_extended[rtr]["^"] = fwd_id
   
-tfs = {}   
-files_in_dir = os.listdir(args.data_path)
-for file_in_dir in files_in_dir:
-  if file_in_dir.endswith(".tf.json"):
-    tf = TF(1)
-    tf.load_from_json("%s/%s"%(args.data_path,file_in_dir))
-    tfs[file_in_dir[0:-8]] = tf
+
+f = TF(1)
+f.load_from_json("%s/%s.tf.json"%(args.data_path,args.rtr_name))
+print "Modifying transfer function of router ",args.rtr_name
     
 if args.view:
-  f = tfs[args.rtr_name]
   stage = args.view[0]
   i = 1
   for rule in f.rules:
     if stage == get_stage(rule):
       print i,":",get_openflow_rule(rule,inv_mapf)
     i = i + 1;
-elif args.rm:
-  f = tfs[args.rtr_name]
+if args.rm:
   indices = args.rm[0].split(",")
   indices = [int(i) for i in indices]
   indices.sort(reverse=True)
   for index in indices:
     f.remove_rule(index-1)
-  f.save_object_to_file("%s/%s.tf"%(args.data_path,args.rtr_name))
-  f.save_as_json("%s/%s.tf.json"%(args.data_path,args.rtr_name))    
-elif args.add:
-  f = tfs[args.rtr_name]
-  position = int(args.add[0])-1
-  tokens = args.add[1].split(";")
-  rule = parse_new_rule_tokens(tokens,mapf_extended,args.rtr_name)
-  if rule["mask"] == None:
-    f.add_fwd_rule(rule,position)
-  elif rule["mask"] != None:
-    f.add_rewrite_rule(rule,position)
-  f.save_object_to_file("%s/%s.tf"%(args.data_path,args.rtr_name))
-  f.save_as_json("%s/%s.tf.json"%(args.data_path,args.rtr_name))
-  
+   
+if args.add:
+  positions = (args.add[0]).split(",")
+  rules = (args.add[1]).split(":")
+  if len(rules) != len(positions):
+    sys.stderr.write("Number of positions and number of rules should be the same")
+  for i in range(len(positions)):
+    position = int(positions[i])-1
+    tokens = rules[i].split(";")
+    rule = parse_new_rule_tokens(tokens,mapf_extended,args.rtr_name)
+    if rule["mask"] == None:
+      f.add_fwd_rule(rule,position)
+    elif rule["mask"] != None:
+      f.add_rewrite_rule(rule,position)
+
+f.save_object_to_file("%s/%s.tf"%(args.data_path,args.rtr_name))
+f.save_as_json("%s/%s.tf.json"%(args.data_path,args.rtr_name))  
