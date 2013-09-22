@@ -206,7 +206,7 @@ for line in lines:
         final_table.append(["","",""])
       count += 1
       print "**FEC ",count,"**"
-      print "Header at Destination:",final_hs
+      print final_hs
       print tabulate(final_table,["In-Port","Match and Action","Out-Port"],tablefmt="orgtbl")
       print "\n"
       str_rules_table = []
