@@ -12,6 +12,7 @@ from time import time
 from config_parser.cisco_router_parser import cisco_router
 from headerspace.tf import TF
 import json 
+import os
 
 '''
 settings is a dictionary containing the following:
@@ -91,6 +92,8 @@ def generate_transfer_functions(settings):
     else:
       cs.generate_port_ids([])
       cs.generate_transfer_function(tf)
+    if(not os.path.isdir(settings["output_path"])):
+      os.makedirs(settings["output_path"])
     tf.save_as_json("%s/%s.tf.json"%(settings["output_path"],rtr_name))
     tf.save_object_to_file("%s/%s.tf"%(settings["output_path"],rtr_name))
     id += 1
