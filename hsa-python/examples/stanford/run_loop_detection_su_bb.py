@@ -8,7 +8,7 @@ Created on Aug 14, 2011
 
 @author: Peyman Kazemian
 '''
-from examples.utils.network_loader import load_network
+from examples.example_utils.network_loader import load_network
 from config_parser.cisco_router_parser import cisco_router
 from time import time
 from headerspace.applications import detect_loop,print_paths

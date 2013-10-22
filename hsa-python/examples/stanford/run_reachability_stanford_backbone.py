@@ -9,7 +9,7 @@ Created on Aug 14, 2011
 
 @author: Peyman Kazemian
 '''
-from examples.utils.network_loader import load_network
+from examples.example_utils.network_loader import load_network
 from config_parser.cisco_router_parser import cisco_router
 from utils.wildcard import wildcard_create_bit_repeat
 from utils.wildcard_utils import set_header_field
