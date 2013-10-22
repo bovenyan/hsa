@@ -1,11 +1,15 @@
 #!/bin/bash
-if [ "$0" != 'bash' ];then
-echo "Please source this script to set PYTHONPATH."
+if [[ $0 != *bash ]];then
+    echo "Please source this script to set PYTHONPATH."
 else
-a=$(pwd 2>&1)
-echo "Add $a to PYTHONPATH."
-PYTHONPATH="$PYTHONPATH:$a"
-export PYTHONPATH
+    curr_folder=$(pwd 2>&1)
+    if [[ $PYTHONPATH == *"$curr_folder"* ]]; then
+        echo "$curr_folder already present in PYTHONPATH."
+    else
+        echo "Adding $curr_folder to PYTHONPATH."
+        PYTHONPATH="$PYTHONPATH:$curr_folder"
+        export PYTHONPATH
+    fi
 fi
 cd c-bytearray
 python setup.py build
