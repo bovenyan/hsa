@@ -8,7 +8,7 @@ Created on May 29, 2012
 
 @author: Peyman Kazemian
 '''
-from examples.utils.cisco_tf_generator import generate_transfer_functions
+from examples.example_utils.cisco_tf_generator import generate_transfer_functions
 
 format = {}
 format["ip_dst_pos"] = 0

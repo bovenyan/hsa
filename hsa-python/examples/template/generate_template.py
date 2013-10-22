@@ -4,7 +4,7 @@ Created on Aug 1, 2012
 @author: Peyman Kazemian
 '''
 
-from examples.utils.cisco_tf_generator import generate_transfer_functions
+from examples.example_utils.cisco_tf_generator import generate_transfer_functions
 from config_parser.graph_xml_parser import graph_xml
 
 g = graph_xml()
