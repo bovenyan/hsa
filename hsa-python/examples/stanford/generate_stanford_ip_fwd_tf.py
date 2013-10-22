@@ -72,7 +72,7 @@ settings = {"rtr_names":["bbra_rtr",
             ("yoza_rtr","te1/1","yozb_rtr","te1/3"),
             ("yoza_rtr","te1/2","yozb_rtr","te1/2")],
             "hs_format":format,
-            "replace_vlans":[0,0,0,0,580,580,0,0,0,0,0,0,580,580,0,0],
+            "replace_vlans":[None,None,None,None,(83,580),(83,580),None,None,None,None,None,None,(83,580),(83,580),None,None],
             "fwd_table_only":True,
             }
 generate_transfer_functions(settings)
