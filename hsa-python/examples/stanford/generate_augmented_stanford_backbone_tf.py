@@ -8,6 +8,7 @@ Created on Aug 10, 2011
 
 @author: Peyman Kazemian
 '''
+import os
 from config_parser.cisco_router_parser import *
 from headerspace.tf import *
 from time import time, clock
@@ -77,6 +78,8 @@ topology = [("bbra_rtr","te7/3","goza_rtr","te2/1"),
             ]
 
 id = 1
+if (not os.path.isdir(output_dir)):
+    os.makedirs(output_dir)
 f = open("%s/port_map.txt"%output_dir,'w')
 dummy_cs = cisco_router(1)
 ttf = TF(dummy_cs.HS_FORMAT()["length"]*2)
