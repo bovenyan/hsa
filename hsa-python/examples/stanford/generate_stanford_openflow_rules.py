@@ -8,6 +8,7 @@ Created on Mar 31, 2012
 
 @author: Peyman Kazemian
 '''
+import os
 from config_parser.transfer_function_to_openflow import OpenFlow_Rule_Generator
 from headerspace.tf import TF
 
@@ -33,6 +34,9 @@ rtr_names = ["bbra_rtr",
              "yoza_rtr",
              "yozb_rtr",
              ]
+
+if (not os.path.isdir("stanford_openflow_rules")):
+    os.makedirs("stanford_openflow_rules")
 
 for rtr_name in rtr_names:
     f = TF(1)
