@@ -13,6 +13,7 @@ from utils.helper import *
 from headerspace.tf import *
 from headerspace.hs import *
 from xml.etree.ElementTree import ElementTree
+from utils.wildcard import wildcard_create_bit_repeat
 import re
 
 class juniperRouter(object):
@@ -77,17 +78,9 @@ class juniperRouter(object):
         format["length"] = 6
         return format
     
-    def wc_to_parsed_string(self, byte_arr):
+    def wc_to_parsed_string(self, i_wc):
         fields = ["vlan","ip_src","ip_dst","ip_proto","tcp_src","tcp_dst","tcp_ctrl"]
-        out_string = ""
-        for field in fields:
-            offset = self.hs_format["%s_pos"%field]
-            len = self.hs_format["%s_len"%field]
-            ba = bytearray()
-            for i in range(0,len):
-                ba.append(byte_arr[offset+i])
-            out_string = "%s%s:%s, "%(out_string, field, byte_array_to_hs_string(ba))
-        return out_string
+        return wc_header_to_parsed_string(self.hs_format,fields,i_wc)
             
     def set_field(self, arr, field, value, right_mask):
         '''
@@ -98,16 +91,7 @@ class juniperRouter(object):
         @right_mask: number of bits, from right that should be ignored when written to field.
         e.g. to have a /24 ip address, set mask to 8.
         '''
-        b_array = int_to_byte_array(value,8*self.hs_format["%s_len"%field])
-        start_pos = 2*self.hs_format["%s_pos"%field]
-        for i in range(2*self.hs_format["%s_len"%field]):
-            if right_mask <= 4*i:
-                arr[start_pos + i] = b_array[i]
-            elif (right_mask > 4*i and right_mask < 4*i + 4):
-                shft = right_mask % 4;
-                rm = (0xff << 2*shft) & 0xff
-                lm = ~rm & 0xff
-                arr[start_pos + i] = (b_array[i] & rm) | (arr[start_pos + i] & lm) 
+        set_header_field(self.hs_format,arr, field, value, right_mask)
         
     def set_switch_id(self, switch_id):
         self.switch_id = switch_id
@@ -137,7 +121,7 @@ class juniperRouter(object):
     
     def acl_dict_entry_to_wc(self,dic_entry):
         result = []
-        result.append(byte_array_get_all_x(self.hs_format["length"]*2))
+        result.append(wildcard_create_bit_repeat(self.hs_format["length"],0x3))
         if (dic_entry["ip_protocol"] != 0):
             self.set_field(result[0], "ip_proto", dic_entry["ip_protocol"], 0)
         self.set_field(result[0], "ip_src", dic_entry["src_ip"], find_num_mask_bits_right_mak(dic_entry["src_ip_mask"]))
@@ -145,25 +129,25 @@ class juniperRouter(object):
         tp_src_matches = range_to_wildcard(dic_entry["transport_src_begin"],dic_entry["transport_src_end"],16)
         tmp = []
         for tp_src_match in tp_src_matches:
-            b = bytearray(result[0])
-            self.set_field(b, "tcp_src", tp_src_match[0], tp_src_match[1])
-            tmp.append(b)
+            w = wildcard_copy(result[0])
+            self.set_field(w, "tcp_src", tp_src_match[0], tp_src_match[1])
+            tmp.append(w)
         result = tmp
         tp_dst_matches = range_to_wildcard(dic_entry["transport_dst_begin"],dic_entry["transport_dst_end"],16)
         tmp = []
         for tp_dst_match in tp_dst_matches:     
             for r in result:
-                b = bytearray(r)
-                self.set_field(b, "tcp_dst", tp_dst_match[0], tp_dst_match[1])
-                tmp.append(b)
+                w = wildcard_copy(r)
+                self.set_field(w, "tcp_dst", tp_dst_match[0], tp_dst_match[1])
+                tmp.append(w)
         result = tmp
         tp_ctrl_matches = range_to_wildcard(dic_entry["tcp_ctrl_begin"],dic_entry["tcp_ctrl_end"],8)
         tmp = []
         for tp_ctrl_matche in tp_ctrl_matches:     
             for r in result:
-                b = bytearray(r)
-                self.set_field(b, "tcp_ctrl", tp_ctrl_matche[0], tp_ctrl_matche[1])
-                tmp.append(b)
+                w = wildcard_copy(r)
+                self.set_field(w, "tcp_ctrl", tp_ctrl_matche[0], tp_ctrl_matche[1])
+                tmp.append(w)
         result = tmp
         return result
     
@@ -484,7 +468,7 @@ class juniperRouter(object):
         intermediate_port = [self.switch_id * self.SWITCH_ID_MULTIPLIER]
         for cnf_vlan in self.config_vlans:
             if self.vlan_ports.has_key("vlan%d"%cnf_vlan):
-                match = byte_array_get_all_x(self.hs_format["length"]*2)
+                match = wildcard_create_bit_repeat(self.hs_format["length"],0x3)
                 self.set_field(match, "vlan", cnf_vlan, 0)
                 all_in_ports = []
                 for port in self.vlan_ports["vlan%d"%cnf_vlan]:
@@ -502,7 +486,7 @@ class juniperRouter(object):
 #        tf.add_fwd_rule(def_rule) 
         
         # default rule from intermediate port to outut port
-        match = byte_array_get_all_x(self.hs_format["length"]*2)
+        match = wildcard_create_bit_repeat(self.hs_format["length"],0x3)
         for port_id in all_in_ports:
             before_out_port = [port_id+self.PORT_TYPE_MULTIPLIER * self.INTERMEDIATE_PORT_TYPE_CONST]
             after_out_port = [port_id+self.PORT_TYPE_MULTIPLIER * self.OUTPUT_PORT_TYPE_CONST]
@@ -559,12 +543,12 @@ class juniperRouter(object):
                 else:
                     
                     #in -ports and match bytearray
-                    match = byte_array_get_all_x(self.hs_format["length"]*2)
+                    match = wildcard_create_bit_repeat(self.hs_format["length"],0x3)
                     self.set_field(match, "ip_dst", int(fwd_rule[0]), 32-subnet)
                     in_port = [self.switch_id * self.SWITCH_ID_MULTIPLIER]
                     # mask, rewrite 
-                    mask = byte_array_get_all_one(self.hs_format["length"]*2)
-                    rewrite = byte_array_get_all_zero(self.hs_format["length"]*2)
+                    mask = wildcard_create_bit_repeat(self.hs_format["length"],0x2)
+                    rewrite = wildcard_create_bit_repeat(self.hs_format["length"],0x1)
                     # find out the file-line it represents:
                     lines = []
                     file_name = ""
@@ -619,7 +603,7 @@ class juniperRouter(object):
                         self.set_field(mask, 'vlan', 0, 0)
                         self.set_field(rewrite, 'vlan', vlan, 0)
                         tf_rule = TF.create_standard_rule(in_port, match, out_ports, mask, rewrite,file_name,lines)
-                        tf.add_rewrite_rule_no_influence(tf_rule) 
+                        tf.add_rewrite_rule(tf_rule) 
                 
                 self.fwd_table[index] = []
                 #Invalidate fwd_rule      

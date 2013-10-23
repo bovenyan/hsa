@@ -2,6 +2,9 @@
 Created on Sep 15, 2012
 
 @author: peyman kazemian
+
+This file separates out a json transfer function into in, mid and out
+transfer functions.
 '''
 from examples.example_utils.network_loader import load_network
 from config_parser.cisco_router_parser import cisco_router
@@ -12,8 +15,8 @@ from time import time
 import json
 from headerspace.applications import find_reachability,print_paths
 
-in_path = "stanford_json_rules/tf_rules"
-out_path = "stanford_json_rules"
+in_path = "tf_stanford_backbone"
+out_path = "splitted_stanford_json_rules"
 
 PORT_TYPE_MULTIPLIER = 10000
 SWITCH_ID_MULTIPLIER = 100000
@@ -61,16 +64,16 @@ for rtr_name in rtr_names:
     rule.pop("inverse_match")
     rule.pop("inverse_rewrite")
     rule.pop("id")
-    if (rule["in_ports"][0] % SWITCH_ID_MULTIPLIER == 0):
-      mid_port = table_id * SWITCH_ID_MULTIPLIER + 2 * PORT_TYPE_MULTIPLIER
-      rule["in_ports"] = [mid_port]
-      tf_mid["rules"].insert(0,rule)
-      
-    elif (rule["in_ports"][0] % SWITCH_ID_MULTIPLIER < PORT_TYPE_MULTIPLIER):
+    
+    if (len(rule["in_ports"]) == 0 or rule["in_ports"][0] % SWITCH_ID_MULTIPLIER < PORT_TYPE_MULTIPLIER):
       #input rules
       for elem in rule["in_ports"]:
         rtr_ports.add(elem)
       tf_in["rules"].insert(0,rule)
+    elif (rule["in_ports"][0] % SWITCH_ID_MULTIPLIER == 0):
+      mid_port = table_id * SWITCH_ID_MULTIPLIER + 2 * PORT_TYPE_MULTIPLIER
+      rule["in_ports"] = [mid_port]
+      tf_mid["rules"].insert(0,rule)
     else:
       # output rules
       rule_in_ports = []

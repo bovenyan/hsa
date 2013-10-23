@@ -31,17 +31,17 @@ for (rtr_name,vlan) in rtr_names:
     cs.set_replaced_vlan(vlan)
     tf = TF(cs.HS_FORMAT()["length"]*2)
     tf.set_prefix_id(rtr_name)
-    cs.read_config_file("i2/data/show_interfaces.xml", rtr_name)
-    cs.read_route_file("i2/data/%s-show_route_forwarding-table_table_default.xml"%rtr_name)
+    cs.read_config_file("data/show_interfaces.xml", rtr_name)
+    cs.read_route_file("data/%s-show_route_forwarding-table_table_default.xml"%rtr_name)
     cs.generate_port_ids([])
     cs.optimize_forwarding_table()
     cs.generate_transfer_function(tf)
     #print tf
-    tf.save_object_to_file("i2/%s.tf"%rtr_name)
+    tf.save_object_to_file("i2-tfs/%s.tf"%rtr_name)
     id += 1
     cs_list[rtr_name] = cs
     
-f = open("i2/port_map.txt",'w')
+f = open("i2-tfs/port_map.txt",'w')
 for rtr in cs_list.keys():
     cs = cs_list[rtr]
     f.write("$%s\n"%rtr)
@@ -90,7 +90,7 @@ for (from_router,from_port,to_router,to_port) in topology:
     tf.add_link_rule(rule)
     rule = TF.create_standard_rule([to_cs.get_port_id(to_port) + to_cs.PORT_TYPE_MULTIPLIER * to_cs.OUTPUT_PORT_TYPE_CONST], None,[from_cs.get_port_id(from_port)], None, None, "", [])
     tf.add_link_rule(rule)
-tf.save_object_to_file("i2/backbone_topology.tf")
+tf.save_object_to_file("i2-tfs/backbone_topology.tf")
 en = time()
 print en - st
     

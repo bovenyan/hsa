@@ -320,6 +320,10 @@ class TF(object):
                 self.inport_to_rule[port] = []
             self.inport_to_rule[port].append(new_rule)
         #output port based lookup table
+        if len(in_ports) == 0:
+            if "all" not in self.inport_to_rule.keys():
+                self.inport_to_rule["all"] = []
+            self.inport_to_rule["all"].append(new_rule)
         for p in out_ports:
             port = "%d"%p
             if port not in self.outport_to_rule.keys():
@@ -334,10 +338,12 @@ class TF(object):
                                              new_rule)
         
     def _get_rules_for_inport(self,inport):
+        r = []
         if (str(inport) in self.inport_to_rule.keys()):
-            return self.inport_to_rule[str(inport)]
-        else:
-            return []
+            r.extend(self.inport_to_rule[str(inport)])
+        if ("all" in self.inport_to_rule.keys()):
+            r.extend(self.inport_to_rule["all"])
+        return r
         
     def _get_rules_for_outport(self,outport):
         if (str(outport) in self.outport_to_rule.keys()):
