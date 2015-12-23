@@ -15,7 +15,7 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
+
     Description: Load topology in Mininet
     Author: James Hongyi Zeng (hyzeng_at_stanford.edu)
 '''
@@ -39,17 +39,17 @@ class StanfordTopo( Topo ):
     OUTPUT_PORT_TYPE_CONST = 2
     PORT_TYPE_MULTIPLIER = 10000
     SWITCH_ID_MULTIPLIER = 100000
-    
+
     DUMMY_SWITCH_BASE = 1000
-    
+
     PORT_MAP_FILENAME = "data/port_map.txt"
     TOPO_FILENAME = "data/backbone_topology.tf"
-    
+
     dummy_switches = set()
 
     def __init__( self ):
         # Read topology info
-        ports = self.load_ports(self.PORT_MAP_FILENAME)        
+        ports = self.load_ports(self.PORT_MAP_FILENAME)
         links = self.load_topology(self.TOPO_FILENAME)
         switches = ports.keys()
 
@@ -58,23 +58,23 @@ class StanfordTopo( Topo ):
 
         # Create switch nodes
         for s in switches:
-            self.add_switch( "s%s" % s )
+            self.addSwitch( "s%s" % s )
 
-        # Wire up switches       
+        # Wire up switches
         self.create_links(links, ports)
-        
+
         # Wire up hosts
         host_id = len(switches) + 1
         for s in switches:
             # Edge ports
             for port in ports[s]:
-                self.add_host( "h%s" % host_id )
-                self.add_link( "h%s" % host_id, "s%s" % s, 0, port )
+                self.addHost( "h%s" % host_id )
+                self.addLink( "h%s" % host_id, "s%s" % s, 0, port )
                 host_id += 1
 
         # Consider all switches and hosts 'on'
         # self.enable_all()
-            
+
     def load_ports(self, filename):
         ports = {}
         f = open(filename, 'r')
@@ -82,17 +82,17 @@ class StanfordTopo( Topo ):
             if not line.startswith("$") and line != "":
                 tokens = line.strip().split(":")
                 port_flat = int(tokens[1])
-                
+
                 dpid = port_flat / self.SWITCH_ID_MULTIPLIER
                 port = port_flat % self.PORT_TYPE_MULTIPLIER
-                
+
                 if dpid not in ports.keys():
                     ports[dpid] = set()
                 if port not in ports[dpid]:
-                    ports[dpid].add(port)             
+                    ports[dpid].add(port)
         f.close()
         return ports
-        
+
     def load_topology(self, filename):
         links = set()
         f = open(filename, 'r')
@@ -104,8 +104,8 @@ class StanfordTopo( Topo ):
                 links.add((src_port_flat, dst_port_flat))
         f.close()
         return links
-        
-    def create_links(self, links, ports):  
+
+    def create_links(self, links, ports):
         '''Generate dummy switches
            For example, interface A1 connects to B1 and C1 at the same time. Since
            Mininet uses veth, which supports point to point communication only,
@@ -113,7 +113,7 @@ class StanfordTopo( Topo ):
 
         @param links link info from the file
         @param ports port info from the file
-        ''' 
+        '''
         # First pass, find special ports with more than 1 peer port
         first_pass = {}
         for (src_port_flat, dst_port_flat) in links:
@@ -121,76 +121,76 @@ class StanfordTopo( Topo ):
             dst_dpid = dst_port_flat / self.SWITCH_ID_MULTIPLIER
             src_port = src_port_flat % self.PORT_TYPE_MULTIPLIER
             dst_port = dst_port_flat % self.PORT_TYPE_MULTIPLIER
-            
+
             if (src_dpid, src_port) not in first_pass.keys():
                 first_pass[(src_dpid, src_port)] = set()
             first_pass[(src_dpid, src_port)].add((dst_dpid, dst_port))
             if (dst_dpid, dst_port) not in first_pass.keys():
                 first_pass[(dst_dpid, dst_port)] = set()
             first_pass[(dst_dpid, dst_port)].add((src_dpid, src_port))
-            
+
         # Second pass, create new links for those special ports
         dummy_switch_id = self.DUMMY_SWITCH_BASE
         for (dpid, port) in first_pass.keys():
             # Special ports!
             if(len(first_pass[(dpid,port)])>1):
-                self.add_switch( "s%s" % dummy_switch_id )
+                self.addSwitch( "s%s" % dummy_switch_id )
                 self.dummy_switches.add(dummy_switch_id)
-            
-                self.add_link( node1="s%s" % dpid, node2="s%s" % dummy_switch_id, port1=port, port2=1 )
+
+                self.addLink( node1="s%s" % dpid, node2="s%s" % dummy_switch_id, port1=port, port2=1 )
                 dummy_switch_port = 2
                 for (dst_dpid, dst_port) in first_pass[(dpid,port)]:
                     first_pass[(dst_dpid, dst_port)].discard((dpid,port))
-                    self.add_link( node1="s%s" % dummy_switch_id, node2="s%s" % dst_dpid, port1=dummy_switch_port, port2=dst_port)
+                    self.addLink( node1="s%s" % dummy_switch_id, node2="s%s" % dst_dpid, port1=dummy_switch_port, port2=dst_port)
                     ports[dst_dpid].discard(dst_port)
                     dummy_switch_port += 1
-                dummy_switch_id += 1  
-                first_pass[(dpid,port)] = set()    
+                dummy_switch_id += 1
+                first_pass[(dpid,port)] = set()
             ports[dpid].discard(port)
-        
+
         # Third pass, create the remaining links
         for (dpid, port) in first_pass.keys():
             for (dst_dpid, dst_port) in first_pass[(dpid,port)]:
-                self.add_link( node1="s%s" % dpid, node2="s%s" % dst_dpid, port1=port, port2=dst_port )
-                ports[dst_dpid].discard(dst_port)     
-            ports[dpid].discard(port)          
-        
+                self.addLink( node1="s%s" % dpid, node2="s%s" % dst_dpid, port1=port, port2=dst_port )
+                ports[dst_dpid].discard(dst_port)
+            ports[dpid].discard(port)
+
 class StanfordMininet ( Mininet ):
 
     def build( self ):
         super( StanfordMininet, self ).build()
-        
+
         # FIXME: One exception... Dual links between yoza and yozb
         # Need _manual_ modification for different topology files!!!
-        self.topo.add_link( node1="s%s" % 15, node2="s%s" % 16, port1=7, port2=4 )
+        self.topo.addLink( node1="s%s" % 15, node2="s%s" % 16, port1=7, port2=4 )
 
 def StanfordTopoTest( controller_ip, controller_port, dummy_controller_ip, dummy_controller_port ):
     topo = StanfordTopo()
 
     main_controller = lambda a: RemoteController( a, ip=controller_ip, port=controller_port)
     net = StanfordMininet( topo=topo, switch=OVSKernelSwitch, controller=main_controller)
-    
+
     net.start()
-    
+
     # These switches should be set to a local controller..
     dummy_switches = topo.dummy_switches
     dummyClass = lambda a: RemoteController( a, ip=dummy_controller_ip, port=dummy_controller_port)
     dummy_controller = net.addController( name='dummy_controller', controller=dummyClass)
     dummy_controller.start()
-    
+
     for dpid in dummy_switches:
         switch = net.nameToNode["s%s" % dpid]
         switch.pause()
         switch.start( [dummy_controller] )
-        
-    # Turn on STP  
+
+    # Turn on STP
     for switchName in topo.switches():
         switch = net.nameToNode[switchName]
         cmd = "ovs-vsctl set Bridge %s stp_enable=true" % switch.name
         switch.cmd(cmd)
-        
+
     switch.cmd('ovs-vsctl set Bridge s1 other_config:stp-priority=0x10')
-        
+
     CLI( net )
     net.stop()
 
